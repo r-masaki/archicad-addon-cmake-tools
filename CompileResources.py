@@ -46,7 +46,8 @@ class ResourceCompiler (object):
             self.resConvPath,
             '-m', 'r',                        # resource compile mode
             '-T', platformSign,                # target platform
-            '-q', 'utf8', codepage,            # code page conversion
+            '-c', '0',                         # code page conversion for JPN
+            '-q', 'utf8', 'utf8',            # code page conversion
             '-w', '2',                        # HiDPI image size list
             '-p', imageResourcesFolder,        # image search path
             '-i', inputFilePath,            # input path
@@ -83,8 +84,7 @@ class WinResourceCompiler (ResourceCompiler):
             '/I', self.sourcesPath,
             '/I', self.resourceObjectsPath,
             '/DWINDOWS',
-            '/source-charset:utf-8',
-            '/execution-charset:utf-8',
+            '/utf-8',
             '/Fi{}'.format (precompiledGrcFilePath),
             grcFilePath,
         ])
@@ -109,6 +109,7 @@ class WinResourceCompiler (ResourceCompiler):
         nativeResourceFile = self.GetNativeResourceFile ()
         result = subprocess.call ([
             'rc',
+            '/c', '65001', # code page conversion for JPN
             '/i', os.path.join (self.devKitPath, 'Inc'),
             '/i', os.path.join (self.devKitPath, 'Modules', 'DGLib'),
             '/i', self.sourcesPath,
