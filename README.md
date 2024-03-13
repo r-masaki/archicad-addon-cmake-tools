@@ -17,3 +17,10 @@ The repo includes a BuildAddOn.py python script, that handles the building of th
 - -b, --buildNum (optional, but mandatory if --devKitPath is used): Build number of the used local APIDevKit. Ex: -b 3001.
 - -p, --package (optional): toggles creating zip archive with the built Add-On files.
 - -a, --additionalCMakeParams (optional): a list of additional addon-specific CMake parameters as keys or key=value pairs. The build script will forward it to CMake. Ex: -a var1=value1 var2="value 2" var3.
+
+## Library Part Conversion
+1. Create an 'ACLib' folder in the same directory as 'Src', 'RFIX', or 'RINT'.
+2. Use the BuildAddOn.py script to build a project; this will automatically generate the 'aclibconfig.json' file in the ACLib folder.
+3. Specify the path to your LP_XMLConverter in the JSON file.
+4. Inside the ACLib folder, create a 'Src' subfolder and add all library part sources in HSF format to this folder.
+5. Build your project (the MakeACLib.py script will execute, converting .hsf files to .gsm before running CompileResource.py).
