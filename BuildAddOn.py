@@ -202,16 +202,30 @@ def BuildAddOn (addOnName, platformName, additionalParams, workspaceRootFolder, 
     if projGenResult != 0:
         raise Exception ('Failed to generate project!')
     
-    # Add params to build AddOn
-    buildParams = [
-        'cmake',
-        '--build', str (buildPath),
-        '--config', configuration
-    ]
 
-    buildResult = subprocess.call (buildParams)
-    if buildResult != 0:
-        raise Exception ('Failed to build project!')
+    # Add empty config file to ACLib
+    acLibFolder = workspaceRootFolder / 'ACLib'
+    if os.path.exists(acLibFolder) and os.path.isdir(acLibFolder):
+        libConfig = {
+                "LPXML_Converter_Path": ""
+        }
+
+        filePath = acLibFolder / 'aclibconfig.json'
+        with open(filePath, "w") as f:
+            json.dump(libConfig, f, indent=4)
+        
+
+
+    # # Add params to build AddOn
+    # buildParams = [
+    #     'cmake',
+    #     '--build', str (buildPath),
+    #     '--config', configuration
+    # ]
+
+    # buildResult = subprocess.call (buildParams)
+    # if buildResult != 0:
+    #     raise Exception ('Failed to build project!')
 
 
 def BuildAddOns (args, addOnName, platformName, languageList, additionalParams, workspaceRootFolder, buildFolder, devKitFolderList):
