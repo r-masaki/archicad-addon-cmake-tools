@@ -1,4 +1,4 @@
-function (SetGlobalCompilerDefinitions acVersion)
+function (SetGlobalCompilerDefinitions acVersion addOnLanguage)
 
     if (WIN32)
         add_definitions (-DUNICODE -D_UNICODE)
@@ -9,6 +9,7 @@ function (SetGlobalCompilerDefinitions acVersion)
         endif ()
     endif ()
     add_definitions (-DACExtension)
+    add_definitions (-D${addOnLanguage})
 
 endfunction ()
 
