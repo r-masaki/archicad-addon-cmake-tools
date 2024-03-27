@@ -3,6 +3,11 @@ import os
 import sys
 import pathlib
 import json
+import argparse
+import shutil
+
+
+exclude_extensions = ['.tif']
 
 def run_application(converterPath, srcPath, destPath):
 
@@ -20,35 +25,66 @@ def run_application(converterPath, srcPath, destPath):
         print("MakeLib Failed:", e)
 
 
-def Main ():
+
+def copy_folder_contents(src_folder, dest_folder):
+    for item in os.listdir(src_folder):
+        src_item = os.path.join(src_folder, item)
+        dest_item = os.path.join(dest_folder, item)
+
+        if os.path.isdir(src_item):
+            copy_folder_contents(src_item, dest_folder)
+        else:
+            file_extension = os.path.splitext(src_item)[1]
+            if file_extension not in exclude_extensions:
+                shutil.copy2(src_item, dest_item)
+
+    # shutil.copytree(destPath, imagePath, dirs_exist_ok=True)
+
+def Main (argv):
+
+    # check language code
+    parser = argparse.ArgumentParser (description = 'Archicad Add-On Resource Compiler.')
+    parser.add_argument ('languageCode', help = 'Language code of the Add-On.')
+
+    args = parser.parse_args ()
+    languageCode = args.languageCode
 
     current_file_path = pathlib.Path (__file__).parent.absolute ().parent.absolute()
+
+    # check config file
+    configPath = current_file_path / 'aclibconfig.json'
+    if configPath.exists():
+        with open (configPath, 'r') as configFile:
+            configData = json.load (configFile)
+    else:
+        print("Skip MakeLib: aclibconfig.json not found at the specified path.")
+        sys.exit()
+
+
+    # check source folder
+    resource_folder_name = "R" + languageCode
     aclib_folder_name = "ACLib"
-    target_folder_path = current_file_path / aclib_folder_name
+    target_folder_path = current_file_path / resource_folder_name / aclib_folder_name
+
 
     if os.path.exists(target_folder_path):
         try:
-            configFile = target_folder_path / 'aclibconfig.json'
-
-            # Load config data
-            configPath = pathlib.Path (configFile)
-            if configPath.is_dir ():
-                raise Exception (f'{configPath} is a directory!')
-            with open (configPath, 'r') as configFile:
-                configData = json.load (configFile)
-
             converterPath =  pathlib.Path (configData['LPXML_Converter_Path'])
-
             if not os.path.exists(converterPath):
-                print("Not found converter. Please set proper path to LP_XMLConverter")
+                print("Not found LPXML_Converter. Please set proper path to LP_XMLConverter")
                 sys.exit(1)
             
             src_folder_name = target_folder_path / 'Src'
-            dest_folder_name = current_file_path / 'RFIX'/'Images'
+            dest_folder_name = target_folder_path / 'Bin'
             srcPath = pathlib.Path (src_folder_name)
             destPath = pathlib.Path (dest_folder_name)
 
             run_application(converterPath, srcPath, destPath)
+
+            # copy files to Images folder
+            imagePath = pathlib.Path(current_file_path / 'RFIX'/'Images')
+            copy_folder_contents(destPath, imagePath)
+
 
         except Exception as e:
                 print (e)
@@ -59,4 +95,4 @@ def Main ():
         sys.exit()
 
 if __name__ == "__main__":
-    Main ()
+    Main (sys.argv)

@@ -9,7 +9,15 @@ function (SetGlobalCompilerDefinitions acVersion addOnLanguage)
         endif ()
     endif ()
     add_definitions (-DACExtension)
-    add_definitions (-D${addOnLanguage})
+
+    if(NOT addOnLanguage)
+        set(locLang "INT")
+    else ()
+        set(locLang ${addOnLanguage})
+    endif ()
+
+    set(locLangMacro "USE_${locLang}")
+    add_definitions (-D${locLangMacro})
 
 endfunction ()
 
@@ -137,7 +145,7 @@ function (GenerateAddOnProject acVersion devKitDir addOnName addOnSourcesFolder 
             DEPENDS ${AddOnResourceFiles} ${AddOnImageFiles}
             COMMENT "Compiling resources..."
             COMMAND ${CMAKE_COMMAND} -E make_directory "${ResourceObjectsDir}"
-            COMMAND ${Python_EXECUTABLE} "${CMAKE_CURRENT_FUNCTION_LIST_DIR}/MakeACLib.py"
+            COMMAND ${Python_EXECUTABLE} "${CMAKE_CURRENT_FUNCTION_LIST_DIR}/MakeACLib.py" "${addOnLanguage}"
             COMMAND ${Python_EXECUTABLE} "${CMAKE_CURRENT_FUNCTION_LIST_DIR}/CompileResources.py" "${addOnLanguage}" "${devKitDir}" "${AddOnSourcesFolderAbsolute}" "${AddOnResourcesFolderAbsolute}" "${ResourceObjectsDir}" "${ResourceObjectsDir}/${addOnName}.res"
             COMMAND ${CMAKE_COMMAND} -E touch ${ResourceStampFile}
         )
@@ -147,7 +155,7 @@ function (GenerateAddOnProject acVersion devKitDir addOnName addOnSourcesFolder 
             DEPENDS ${AddOnResourceFiles} ${AddOnImageFiles}
             COMMENT "Compiling resources..."
             COMMAND ${CMAKE_COMMAND} -E make_directory "${ResourceObjectsDir}"
-            COMMAND ${Python_EXECUTABLE} "${CMAKE_CURRENT_FUNCTION_LIST_DIR}/MakeACLib.py"
+            COMMAND ${Python_EXECUTABLE} "${CMAKE_CURRENT_FUNCTION_LIST_DIR}/MakeACLib.py" "${addOnLanguage}"
             COMMAND ${Python_EXECUTABLE} "${CMAKE_CURRENT_FUNCTION_LIST_DIR}/CompileResources.py" "${addOnLanguage}" "${devKitDir}" "${AddOnSourcesFolderAbsolute}" "${AddOnResourcesFolderAbsolute}" "${ResourceObjectsDir}" "${CMAKE_BINARY_DIR}/$<CONFIG>/${addOnName}.bundle/Contents/Resources"
             COMMAND ${CMAKE_COMMAND} -E copy "${devKitDir}/Inc/PkgInfo" "${CMAKE_BINARY_DIR}/$<CONFIG>/${addOnName}.bundle/Contents/PkgInfo"
             COMMAND ${CMAKE_COMMAND} -E touch ${ResourceStampFile}

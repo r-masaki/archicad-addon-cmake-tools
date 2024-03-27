@@ -80,8 +80,10 @@ def PrepareParameters (args):
                     if not value:
                         raise Exception (f'Value not provided for {key}!')
                     additionalParams[key] = value
+
+    useBuiltinFlag = configData.get('useBuiltinLibrary', False)
                 
-    return [devKitData, platformName, addOnName, acVersionList, languageList, additionalParams]
+    return [devKitData, platformName, addOnName, acVersionList, languageList, additionalParams, useBuiltinFlag]
 
 
 def PrepareDirectories (args, devKitData, platformName, addOnName, acVersionList):
@@ -201,20 +203,6 @@ def BuildAddOn (addOnName, platformName, additionalParams, workspaceRootFolder, 
     projGenResult = subprocess.call (projGenParams)
     if projGenResult != 0:
         raise Exception ('Failed to generate project!')
-    
-
-    # Add empty config file to ACLib
-    acLibFolder = workspaceRootFolder / 'ACLib'
-    if os.path.exists(acLibFolder) and os.path.isdir(acLibFolder):
-        libConfig = {
-                "LPXML_Converter_Path": ""
-        }
-
-        filePath = acLibFolder / 'aclibconfig.json'
-        with open(filePath, "w") as f:
-            json.dump(libConfig, f, indent=4)
-        
-
 
     # # Add params to build AddOn
     # buildParams = [
@@ -309,13 +297,23 @@ def Main ():
     try:
         args = ParseArguments ()
 
-        [devKitData, platformName, addOnName, acVersionList, languageList, additionalParams] = PrepareParameters (args)
+        [devKitData, platformName, addOnName, acVersionList, languageList, additionalParams, useBuiltinFlag] = PrepareParameters (args)
 
         [workspaceRootFolder, buildFolder, packageRootFolder, devKitFolderList] = PrepareDirectories (args, devKitData, platformName, addOnName, acVersionList)
 
         os.chdir (workspaceRootFolder)
         
         BuildAddOns (args, addOnName, platformName, languageList, additionalParams, workspaceRootFolder, buildFolder, devKitFolderList)
+
+        # Add empty config file
+        if useBuiltinFlag:
+            libConfig = {
+                "LPXML_Converter_Path": ""
+            }
+
+            filePath = workspaceRootFolder / 'aclibconfig.json'
+            with open(filePath, "w") as f:
+                json.dump(libConfig, f, indent=4)
 
         if args.package:
             PackageAddOns (args, devKitData, addOnName, platformName, acVersionList, languageList, buildFolder, packageRootFolder)
