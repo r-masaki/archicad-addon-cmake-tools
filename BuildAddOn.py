@@ -15,6 +15,7 @@ def ParseArguments ():
     parser = argparse.ArgumentParser ()
     parser.add_argument ('--init', required = False, action='store_true', help = 'Initialize project files')
     parser.add_argument ('--release', required = False, action='store_true', help = 'Build add-on with Release mode')
+    parser.add_argument ('--notarize', required = False, action='store_true', help = 'Build add-on with Release mode and notarization for only macOSX')
     parser.add_argument ('-c', '--configFile', dest = 'configFile', required = True, help = 'JSON Configuration file')
     parser.add_argument ('-v', '--acVersion', dest = 'acVersion', nargs = '+', type = str, required = False, help = 'Archicad version number list. Ex: 26 27')
     parser.add_argument ('-l', '--allLocalizedVersions', dest = 'allLocalizedVersions', required = False, action='store_true', help = 'Create localized release builds for all configured languages.' )
@@ -37,6 +38,7 @@ def PrepareParameters (args):
 
     genIDEFlag = args.init
     releaseFlag = args.release
+    notarizeFlag = args.notarize
     
     # Check platform operating system
     platformName = None
@@ -90,7 +92,7 @@ def PrepareParameters (args):
 
     useBuiltinFlag = configData.get('useBuiltinLibrary', False)
                 
-    return [devKitData, platformName, addOnName, acVersionList, languageList, additionalParams, useBuiltinFlag, genIDEFlag, releaseFlag]
+    return [devKitData, platformName, addOnName, acVersionList, languageList, additionalParams, useBuiltinFlag, genIDEFlag, releaseFlag, notarizeFlag]
 
 
 def PrepareDirectories (args, devKitData, platformName, addOnName, acVersionList):
@@ -218,7 +220,7 @@ def RunShellScript(script_path, bundle_path):
         sys.exit(1)
 
 
-def BuildAddOn (addOnName, platformName, additionalParams, workspaceRootFolder, buildFolder, devKitFolder, version, configuration, languageCode, genIDEFlag, releaseFlag):
+def BuildAddOn (addOnName, platformName, additionalParams, workspaceRootFolder, buildFolder, devKitFolder, version, configuration, languageCode, genIDEFlag, releaseFlag, notarizeFlag):
     buildPath = buildFolder / addOnName / version / languageCode
 
     # Add params to configure cmake
@@ -243,7 +245,7 @@ def BuildAddOn (addOnName, platformName, additionalParams, workspaceRootFolder, 
         if buildResult != 0:
             raise Exception ('Failed to build project!')
         
-        if platformName == 'MAC':
+        if notarizeFlag and platformName == 'MAC':
             # run notarize script
             print('start notarization')
             shPath = pathlib.Path (__file__).parent.absolute () / 'OSX' / 'Notarize.sh'
@@ -255,7 +257,7 @@ def BuildAddOn (addOnName, platformName, additionalParams, workspaceRootFolder, 
         
 
 
-def BuildAddOns (args, addOnName, platformName, languageList, additionalParams, workspaceRootFolder, buildFolder, devKitFolderList, genIDEFlag, releaseFlag):
+def BuildAddOns (args, addOnName, platformName, languageList, additionalParams, workspaceRootFolder, buildFolder, devKitFolderList, genIDEFlag, releaseFlag, notarizeFlag):
     # At this point, devKitFolderList dictionary has all provided ACVersions as keys
     # For every ACVersion
     # If release, build Add-On for all languages with RelWithDebInfo configuration
@@ -266,7 +268,7 @@ def BuildAddOns (args, addOnName, platformName, languageList, additionalParams, 
             devKitFolder = devKitFolderList[version]
 
             for languageCode in languageList:                  
-                BuildAddOn (addOnName, platformName, additionalParams, workspaceRootFolder, buildFolder, devKitFolder, version, 'Release', languageCode, genIDEFlag, releaseFlag)
+                BuildAddOn (addOnName, platformName, additionalParams, workspaceRootFolder, buildFolder, devKitFolder, version, 'Release', languageCode, genIDEFlag, releaseFlag, notarizeFlag)
                 # BuildAddOn (addOnName, platformName, additionalParams, workspaceRootFolder, buildFolder, devKitFolder, version, 'RelWithDebInfo', languageCode)
                 # if args.package is False:
                 #     BuildAddOn (addOnName, platformName, additionalParams, workspaceRootFolder, buildFolder, devKitFolder, version, 'Debug', languageCode)
@@ -338,13 +340,13 @@ def Main ():
     try:
         args = ParseArguments ()
 
-        [devKitData, platformName, addOnName, acVersionList, languageList, additionalParams, useBuiltinFlag, genIDEFlag, releaseFlag] = PrepareParameters (args)
+        [devKitData, platformName, addOnName, acVersionList, languageList, additionalParams, useBuiltinFlag, genIDEFlag, releaseFlag, notarizeFlag] = PrepareParameters (args)
 
         [workspaceRootFolder, buildFolder, packageRootFolder, devKitFolderList] = PrepareDirectories (args, devKitData, platformName, addOnName, acVersionList)
 
         os.chdir (workspaceRootFolder)
         
-        BuildAddOns (args, addOnName, platformName, languageList, additionalParams, workspaceRootFolder, buildFolder, devKitFolderList, genIDEFlag, releaseFlag)
+        BuildAddOns (args, addOnName, platformName, languageList, additionalParams, workspaceRootFolder, buildFolder, devKitFolderList, genIDEFlag, releaseFlag, notarizeFlag)
 
         # Add empty config file
         if useBuiltinFlag:
