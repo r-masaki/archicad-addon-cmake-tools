@@ -205,6 +205,19 @@ def GetProjectGenerationParams (workspaceRootFolder, buildPath, addOnName, platf
     return projGenParams
 
 
+def RunShellScript(script_path, bundle_path):
+    try:
+        # スクリプトと引数を結合して実行するコマンドを作成
+        cmd = [script_path, bundle_path]
+        
+        # シェルスクリプトを実行
+        subprocess.run(cmd, check=True)
+        
+    except subprocess.CalledProcessError as e:
+        print(f"Error executing {script_path}: {e}")
+        sys.exit(1)
+
+
 def BuildAddOn (addOnName, platformName, additionalParams, workspaceRootFolder, buildFolder, devKitFolder, version, configuration, languageCode, genIDEFlag, releaseFlag):
     buildPath = buildFolder / addOnName / version / languageCode
 
@@ -229,6 +242,17 @@ def BuildAddOn (addOnName, platformName, additionalParams, workspaceRootFolder, 
         buildResult = subprocess.call (buildParams)
         if buildResult != 0:
             raise Exception ('Failed to build project!')
+        
+        if platformName == 'MAC':
+            # run notarize script
+            print('start notarization')
+            shPath = pathlib.Path (__file__).parent.absolute () / 'OSX' / 'Notarize.sh'
+            extension = 'bundle'
+            bundleFile = addOnName + "." + extension
+            bundlePath = buildPath / configuration / bundleFile
+            RunShellScript(shPath, bundlePath)
+
+        
 
 
 def BuildAddOns (args, addOnName, platformName, languageList, additionalParams, workspaceRootFolder, buildFolder, devKitFolderList, genIDEFlag, releaseFlag):
