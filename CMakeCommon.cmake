@@ -133,6 +133,7 @@ function (GenerateAddOnProject acVersion devKitDir addOnName addOnSourcesFolder 
             ${addOnResourcesFolder}/R${addOnLanguage}/*.grc
             ${addOnResourcesFolder}/RFIX/*.grc
             ${addOnResourcesFolder}/RFIX.mac/*.plist
+            ${addOnResourcesFolder}/RFIX.mac/*.xcconfig
             ${CMAKE_CURRENT_FUNCTION_LIST_DIR}/*.py
         )
     endif ()
@@ -150,6 +151,7 @@ function (GenerateAddOnProject acVersion devKitDir addOnName addOnSourcesFolder 
             COMMAND ${CMAKE_COMMAND} -E touch ${ResourceStampFile}
         )
     else ()
+
         add_custom_command (
             OUTPUT ${ResourceStampFile}
             DEPENDS ${AddOnResourceFiles} ${AddOnImageFiles}
@@ -209,5 +211,4 @@ function (GenerateAddOnProject acVersion devKitDir addOnName addOnSourcesFolder 
 
     set_source_files_properties (${AddOnSourceFiles} PROPERTIES LANGUAGE CXX)
     SetCompilerOptions (${addOnName} ${acVersion})
-
 endfunction ()
