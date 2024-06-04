@@ -35,6 +35,8 @@ if [ $? -eq 0 ]; then
     mkdir -p "$destination"
     cp -r "$bundlePath" "$destination"
 
+    open "$destination"
+
 else
     echo "notarytool encountered an error."
 fi
