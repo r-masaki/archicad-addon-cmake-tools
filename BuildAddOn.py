@@ -238,7 +238,8 @@ def BuildAddOn (addOnName, platformName, additionalParams, workspaceRootFolder, 
         buildParams = [
             'cmake',
             '--build', str (buildPath),
-            '--config', configuration
+            '--config', configuration,
+            '--clean-first'
         ]
 
         buildResult = subprocess.call (buildParams)
