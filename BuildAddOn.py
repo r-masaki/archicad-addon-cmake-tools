@@ -351,7 +351,7 @@ def Main ():
         BuildAddOns (args, addOnName, platformName, languageList, additionalParams, workspaceRootFolder, buildFolder, devKitFolderList, genIDEFlag, releaseFlag, notarizeFlag)
 
         # Add empty config file
-        if useBuiltinFlag:
+        if genIDEFlag and useBuiltinFlag:
             libConfig = {
                 "LPXML_Converter_Path": ""
             }
