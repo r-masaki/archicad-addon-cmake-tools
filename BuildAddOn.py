@@ -239,7 +239,6 @@ def BuildAddOn (addOnName, platformName, additionalParams, workspaceRootFolder, 
             'cmake',
             '--build', str (buildPath),
             '--config', configuration,
-            '--target', addOnName,
             '--clean-first'
         ]
 
