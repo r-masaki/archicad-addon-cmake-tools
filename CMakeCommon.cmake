@@ -111,7 +111,7 @@ function (LinkGSLibrariesToProject acVersion devKitDir addOnName)
 
 endfunction ()
 
-function (GenerateAddOnProject acVersion devKitDir addOnName addOnSourcesFolder addOnResourcesFolder addOnLanguage)
+function (GenerateAddOnProject acVersion devKitDir addOnName addOnSourcesFolder addOnResourcesFolder addOnLanguage additionalIncludeDirs)
 
     find_package (Python COMPONENTS Interpreter)
 
@@ -206,6 +206,31 @@ function (GenerateAddOnProject acVersion devKitDir addOnName addOnSourcesFolder 
         ${addOnSourcesFolder}
         ${devKitDir}/Inc
     )
+
+    message(WARNING "Additional Include Dir = ${additionalIncludeDirs}")
+    string(REPLACE " " ";" include_dirs ${additionalIncludeDirs})
+
+    if (include_dirs)
+        foreach (dir IN LISTS include_dirs)
+            if (IS_DIRECTORY ${dir})
+                target_include_directories (${addOnName} PUBLIC ${dir})
+                message(WARNING "Directory ${dir} is a directory.")
+ 
+                file (GLOB subDirs ${dir}/*)
+                foreach (subDir ${subDirs})
+                    if (IS_DIRECTORY ${subDir})
+                        target_include_directories (${addOnName} PUBLIC ${subDir})
+                        message(WARNING "Sub-directory ${subDir} is a directory.")
+                    else ()
+                        # message(WARNING "Sub-directory ${subDir} is not a directory.")
+                    endif ()
+                endforeach ()
+            else ()
+                # message(WARNING "Directory ${dir} is not a directory.")
+            endif ()
+        endforeach ()
+    endif ()
+
 
     LinkGSLibrariesToProject (${acVersion} ${devKitDir} ${addOnName})
 

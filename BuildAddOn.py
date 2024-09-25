@@ -198,9 +198,15 @@ def GetProjectGenerationParams (workspaceRootFolder, buildPath, addOnName, platf
     projGenParams.append (f'-DAC_API_DEVKIT_DIR={str (devKitFolder / "Support")}')
     projGenParams.append (f'-DAC_ADDON_LANGUAGE={languageCode}')
 
-    if additionalParams is not None:
-        for key in additionalParams:
-            projGenParams.append (f'-D{key}={additionalParams[key]}')
+    if additionalParams and 'ADDITIONAL_INCLUDE_DIRS' in additionalParams and additionalParams['ADDITIONAL_INCLUDE_DIRS']:
+        additionalIncludeDirList = [str(pathlib.Path(dir)) for dir in additionalParams['ADDITIONAL_INCLUDE_DIRS']]
+        cmakeIncludeDirList = " ".join(additionalIncludeDirList);
+        print ({cmakeIncludeDirList})
+        projGenParams.append(f'-DADDITIONAL_INCLUDE_DIRS={cmakeIncludeDirList}')
+    
+    # if additionalParams is not None:
+    #     for key in additionalParams:
+    #         projGenParams.append (f'-D{key}={additionalParams[key]}')
 
     projGenParams.append (str (workspaceRootFolder))
 
