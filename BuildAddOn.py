@@ -203,7 +203,9 @@ def GetProjectGenerationParams (workspaceRootFolder, buildPath, addOnName, platf
         cmakeIncludeDirList = " ".join(additionalIncludeDirList);
         print ({cmakeIncludeDirList})
         projGenParams.append(f'-DADDITIONAL_INCLUDE_DIRS={cmakeIncludeDirList}')
-    
+    else:
+        projGenParams.append(f'-DADDITIONAL_INCLUDE_DIRS=""')
+
     # if additionalParams is not None:
     #     for key in additionalParams:
     #         projGenParams.append (f'-D{key}={additionalParams[key]}')
