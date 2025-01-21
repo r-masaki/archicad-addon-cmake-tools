@@ -249,11 +249,16 @@ def BuildAddOn (addOnName, platformName, additionalParams, workspaceRootFolder, 
             '--config', configuration,
             '--clean-first'
         ]
-
+        
         buildResult = subprocess.call (buildParams)
         if buildResult != 0:
             raise Exception ('Failed to build project!')
-        
+
+        # Open build folder
+        if platformName == 'WIN':
+            bundlePath = buildPath / configuration
+            subprocess.run(['explorer', bundlePath])
+
         if notarizeFlag and platformName == 'MAC':
             # run notarize script
             print('start notarization')
@@ -263,7 +268,6 @@ def BuildAddOn (addOnName, platformName, additionalParams, workspaceRootFolder, 
             bundlePath = buildPath / configuration / bundleFile
             RunShellScript(shPath, bundlePath)
 
-        
 
 
 def BuildAddOns (args, addOnName, platformName, languageList, additionalParams, workspaceRootFolder, buildFolder, devKitFolderList, genIDEFlag, releaseFlag, notarizeFlag):
