@@ -25,14 +25,18 @@ function (SetCompilerOptions target acVersion)
 
     if (${acVersion} LESS 27)
         target_compile_features (${target} PUBLIC cxx_std_14)
-    else ()
+    elseif (${acVersion} LESS 29)
         target_compile_features (${target} PUBLIC cxx_std_17)
+    else ()
+        target_compile_features (${target} PUBLIC cxx_std_20)
     endif ()
+
     target_compile_options (${target} PUBLIC "$<$<CONFIG:Debug>:-DDEBUG>")
     if (WIN32)
         target_compile_options (${target} PUBLIC /W4 /WX
             /Zc:wchar_t-
             /wd4499
+            /wd4819
             /EHsc
             -D_CRT_SECURE_NO_WARNINGS
         )
