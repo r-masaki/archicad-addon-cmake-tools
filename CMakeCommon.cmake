@@ -204,6 +204,12 @@ function (GenerateAddOnProject acVersion devKitDir addOnName addOnSourcesFolder 
         set_target_properties (${addOnName} PROPERTIES BUNDLE TRUE)
         set_target_properties (${addOnName} PROPERTIES MACOSX_BUNDLE_INFO_PLIST "${CMAKE_CURRENT_LIST_DIR}/${addOnResourcesFolder}/RFIX.mac/Info.plist")
         set_target_properties (${addOnName} PROPERTIES LIBRARY_OUTPUT_DIRECTORY "${CMAKE_BINARY_DIR}/$<CONFIG>")
+        set_target_properties(${addOnName} PROPERTIES
+                                XCODE_ATTRIBUTE_CODE_SIGN_INJECT_BASE_ENTITLEMENTS "NO"
+                                XCODE_ATTRIBUTE_CODE_SIGN_STYLE "Manual"
+                                XCODE_ATTRIBUTE_ENABLE_HARDENED_RUNTIME "YES"
+                                XCODE_ATTRIBUTE_OTHER_CODE_SIGN_FLAGS "--timestamp --option=runtime"
+                                )
     endif ()
 
     target_include_directories (${addOnName} PUBLIC
