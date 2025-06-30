@@ -248,6 +248,19 @@ def BuildAddOn (addOnName, platformName, additionalParams, workspaceRootFolder, 
         if not os.path.exists(buildPath):
             raise Exception ('Failed: Project file does not exit!')
 
+        # Clear build folder before building (Xcode: clean)
+        if buildPath.exists():
+            # For Xcode, use 'xcodebuild clean' to clear the build folder
+            if platformName == 'MAC':
+                xcodeproj_path = buildPath / f"{addOnName}.xcodeproj"
+                if xcodeproj_path.exists():
+                    subprocess.run([
+                    'xcodebuild',
+                    '-project', str(xcodeproj_path),
+                    '-configuration', configuration,
+                    'clean'
+                    ], check=True)
+                    
         buildParams = [
             'cmake',
             '--build', str (buildPath),
