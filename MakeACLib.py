@@ -7,7 +7,7 @@ import argparse
 import shutil
 
 
-exclude_extensions = ['.tif']
+exclude_extensions = ['.tif', '.svg', '.png', '.jpg', '.jpeg', '.gif', '.bmp', '.webp']
 
 def run_application(converterPath, srcPath, destPath):
 
