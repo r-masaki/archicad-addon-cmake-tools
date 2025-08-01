@@ -217,10 +217,9 @@ function (GenerateAddOnProject acVersion devKitDir addOnName addOnSourcesFolder 
         ${devKitDir}/Inc
     )
 
-    if (NOT additionalIncludeDirs STREQUAL "")
+    if (NOT "${additionalIncludeDirs}" STREQUAL "__NONE__")
         message(WARNING "Additional Include Dir = ${additionalIncludeDirs}")
-        string(REPLACE " " ";" include_dirs ${additionalIncludeDirs})
-
+        string(REPLACE " " ";" include_dirs "${additionalIncludeDirs}")
         if (include_dirs)
             foreach (dir IN LISTS include_dirs)
                 if (IS_DIRECTORY ${dir})
