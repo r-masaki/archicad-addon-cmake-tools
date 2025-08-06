@@ -142,6 +142,8 @@ function (GenerateAddOnProject acVersion devKitDir addOnName addOnSourcesFolder 
         )
     endif ()
 
+
+
     get_filename_component (AddOnSourcesFolderAbsolute "${CMAKE_CURRENT_LIST_DIR}/${addOnSourcesFolder}" ABSOLUTE)
     get_filename_component (AddOnResourcesFolderAbsolute "${CMAKE_CURRENT_LIST_DIR}/${addOnResourcesFolder}" ABSOLUTE)
     if (WIN32)
@@ -208,8 +210,12 @@ function (GenerateAddOnProject acVersion devKitDir addOnName addOnSourcesFolder 
                                 XCODE_ATTRIBUTE_CODE_SIGN_INJECT_BASE_ENTITLEMENTS "NO"
                                 XCODE_ATTRIBUTE_CODE_SIGN_STYLE "Manual"
                                 XCODE_ATTRIBUTE_ENABLE_HARDENED_RUNTIME "YES"
-                                XCODE_ATTRIBUTE_OTHER_CODE_SIGN_FLAGS "--timestamp --option=runtime"
-                                )
+                                XCODE_ATTRIBUTE_OTHER_CODE_SIGN_FLAGS "--timestamp --option=runtime")
+        set_target_properties(${addOnName} PROPERTIES
+                                XCODE_ATTRIBUTE_DEVELOPMENT_TEAM "Z4XVK466R3"
+                                XCODE_ATTRIBUTE_CODE_SIGN_IDENTITY "Developer ID Application"
+                                XCODE_ATTRIBUTE_CODE_SIGN_STYLE "Manual"
+                                XCODE_ATTRIBUTE_CODE_SIGNING_REQUIRED FALSE)
     endif ()
 
     target_include_directories (${addOnName} PUBLIC
