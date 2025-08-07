@@ -372,19 +372,28 @@ def PackageAddOns (args, devKitData, addOnName, platformName, acVersionList, lan
 def CopyResultTo (copyToFolder, buildFolder, version, addOnName, platformName, configuration, languageCode):
     sourceFolder = buildFolder / addOnName / version / languageCode / configuration
 
-    if not copyToFolder.exists ():
-        copyToFolder.mkdir (parents=True)
+    if not copyToFolder.exists():
+        copyToFolder.mkdir(parents=True)
 
     if platformName == 'WIN':
-        shutil.copy (
+        dst_apx = copyToFolder / f'{addOnName}.apx'
+        if dst_apx.exists():
+            dst_apx.unlink()
+        shutil.copy(
             sourceFolder / f'{addOnName}.apx',
-            copyToFolder / f'{addOnName}.apx',
+            dst_apx,
         )
     elif platformName == 'MAC':
-        subprocess.call ([
+        dst_bundle = copyToFolder / f'{addOnName}.bundle'
+        if dst_bundle.exists():
+            if dst_bundle.is_dir():
+                shutil.rmtree(dst_bundle)
+            else:
+                dst_bundle.unlink()
+        subprocess.call([
             'cp', '-R',
             sourceFolder / f'{addOnName}.bundle',
-            copyToFolder / f'{addOnName}.bundle'
+            dst_bundle
         ])
 
 
