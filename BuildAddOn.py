@@ -23,6 +23,7 @@ def ParseArguments ():
     parser.add_argument ('-b', '--buildNum', dest = 'buildNum', type = str, required = False, help = 'Build number of local APIDevKit')
     parser.add_argument ('-p', '--package', dest = 'package', required = False, action='store_true', help = 'Create zip archive.')
     parser.add_argument ('-a', '--additionalCMakeParams', dest = 'additionalCMakeParams', nargs = '+', required = False, help = 'Add-On specific CMake parameter list of key=value pairs. Ex: var1=value1 var2="value 2"')
+    parser.add_argument('--copyTo', dest='copyTo', type=str, required=False, help='Copy built add-on to specified directory after build')
     args = parser.parse_args ()
 
     if args.devKitPath is not None:
@@ -367,6 +368,26 @@ def PackageAddOns (args, devKitData, addOnName, platformName, acVersionList, lan
             ])
 
 
+
+def CopyResultTo (copyToFolder, buildFolder, version, addOnName, platformName, configuration, languageCode):
+    sourceFolder = buildFolder / addOnName / version / languageCode / configuration
+
+    if not copyToFolder.exists ():
+        copyToFolder.mkdir (parents=True)
+
+    if platformName == 'WIN':
+        shutil.copy (
+            sourceFolder / f'{addOnName}.apx',
+            copyToFolder / f'{addOnName}.apx',
+        )
+    elif platformName == 'MAC':
+        subprocess.call ([
+            'cp', '-R',
+            sourceFolder / f'{addOnName}.bundle',
+            copyToFolder / f'{addOnName}.bundle'
+        ])
+
+
 def Main ():
     try:
         args = ParseArguments ()
@@ -391,6 +412,12 @@ def Main ():
 
         if args.package:
             PackageAddOns (args, devKitData, addOnName, platformName, acVersionList, languageList, buildFolder, packageRootFolder)
+
+        if args.copyTo:
+            copyToFolder = pathlib.Path(args.copyTo)
+            for version in devKitFolderList:
+                for languageCode in languageList:
+                    CopyResultTo(copyToFolder, buildFolder, version, addOnName, platformName, 'Release', languageCode)
 
         print ('Build succeeded!')
         sys.exit (0)
