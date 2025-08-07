@@ -369,13 +369,14 @@ def PackageAddOns (args, devKitData, addOnName, platformName, acVersionList, lan
 
 
 
-def CopyResultTo (copyToFolder, buildFolder, version, addOnName, platformName, configuration, languageCode):
-    sourceFolder = buildFolder / addOnName / version / languageCode / configuration
+def CopyResultTo (copyToFolder, buildFolder, version, addOnName, platformName, configuration, languageCode, notarizeFlag):
 
     if not copyToFolder.exists():
         copyToFolder.mkdir(parents=True)
 
     if platformName == 'WIN':
+        sourceFolder = buildFolder / addOnName / version / languageCode / configuration
+
         dst_apx = copyToFolder / f'{addOnName}.apx'
         if dst_apx.exists():
             dst_apx.unlink()
@@ -384,6 +385,11 @@ def CopyResultTo (copyToFolder, buildFolder, version, addOnName, platformName, c
             dst_apx,
         )
     elif platformName == 'MAC':
+        if notarizeFlag:
+            sourceFolder = buildFolder / addOnName / version / languageCode / configuration / "notarized"
+        else:
+            sourceFolder = buildFolder / addOnName / version / languageCode / configuration
+
         dst_bundle = copyToFolder / f'{addOnName}.bundle'
         if dst_bundle.exists():
             if dst_bundle.is_dir():
@@ -426,7 +432,7 @@ def Main ():
             copyToFolder = pathlib.Path(args.copyTo)
             for version in devKitFolderList:
                 for languageCode in languageList:
-                    CopyResultTo(copyToFolder, buildFolder, version, addOnName, platformName, 'Release', languageCode)
+                    CopyResultTo(copyToFolder, buildFolder, version, addOnName, platformName, 'Release', languageCode, notarizeFlag)
 
         print ('Build succeeded!')
         sys.exit (0)
