@@ -81,6 +81,10 @@ def Main (argv):
 
             run_application(converterPath, srcPath, destPath)
 
+            # create Images folder if not exist
+            if not os.path.exists(current_file_path / 'RFIX'/'Images'):
+                os.makedirs(current_file_path / 'RFIX'/'Images')
+
             # copy files to Images folder
             imagePath = pathlib.Path(current_file_path / 'RFIX'/'Images')
             copy_folder_contents(destPath, imagePath)
