@@ -1,11 +1,12 @@
 function (SetGlobalCompilerDefinitions acVersion addOnLanguage)
 
     if (WIN32)
-        add_definitions (-DUNICODE -D_UNICODE)
+        add_definitions (-DUNICODE -D_UNICODE -D_ITERATOR_DEBUG_LEVEL=0)
+        set (CMAKE_MSVC_RUNTIME_LIBRARY MultiThreadedDLL CACHE STRING "" FORCE)
     else ()
         add_definitions (-Dmacintosh=1)
         if (${acVersion} GREATER_EQUAL 26)
-            set (CMAKE_OSX_ARCHITECTURES "x86_64;arm64" PARENT_SCOPE CACHE STRING "" FORCE)
+            set (CMAKE_OSX_ARCHITECTURES "x86_64;arm64" CACHE STRING "" FORCE)
         endif ()
     endif ()
     add_definitions (-DACExtension)
@@ -74,15 +75,11 @@ function (LinkGSLibrariesToProject acVersion devKitDir addOnName)
     if (WIN32)
         if (${acVersion} LESS 27)
             target_link_libraries (${addOnName}
-                "$<$<CONFIG:Debug>:${devKitDir}/Lib/Win/ACAP_STATD.lib>"
-                "$<$<CONFIG:Release>:${devKitDir}/Lib/Win/ACAP_STAT.lib>"
-                "$<$<CONFIG:RelWithDebInfo>:${devKitDir}/Lib/Win/ACAP_STAT.lib>"
+                "${devKitDir}/Lib/Win/ACAP_STAT.lib"
             )
         else ()
             target_link_libraries (${addOnName}
-                "$<$<CONFIG:Debug>:${devKitDir}/Lib/ACAP_STATD.lib>"
-                "$<$<CONFIG:Release>:${devKitDir}/Lib/ACAP_STAT.lib>"
-                "$<$<CONFIG:RelWithDebInfo>:${devKitDir}/Lib/ACAP_STAT.lib>"
+                "${devKitDir}/Lib/ACAP_STAT.lib"
             )
         endif ()
     else ()
@@ -101,7 +98,7 @@ function (LinkGSLibrariesToProject acVersion devKitDir addOnName)
     endif ()
 
     file (GLOB ModuleFolders ${devKitDir}/Modules/*)
-    target_include_directories (${addOnName} PUBLIC ${ModuleFolders})
+    target_include_directories (${addOnName} SYSTEM PUBLIC ${ModuleFolders})
     if (WIN32)
         file (GLOB LibFilesInFolder ${devKitDir}/Modules/*/*/*.lib)
         target_link_libraries (${addOnName} ${LibFilesInFolder})
