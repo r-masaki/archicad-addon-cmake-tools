@@ -214,7 +214,7 @@ def GetToolset (version):
         return 'v142'
     return 'v143'
 
-def GetProjectGenerationParams (args, workspaceRootFolder, buildPath, addOnName, platformName, devKitFolder, version, languageCode, additionalParams):
+def GetProjectGenerationParams (args, workspaceRootFolder, buildPath, platformName, devKitFolder, version, languageCode, release, additionalParams):
     # Add params to configure cmake
     projGenParams = [
         'cmake',
@@ -230,9 +230,14 @@ def GetProjectGenerationParams (args, workspaceRootFolder, buildPath, addOnName,
         projGenParams.append ('-GXcode')
 
     projGenParams.append (f'-DAC_VERSION={version}')
-    projGenParams.append (f'-DAC_ADDON_NAME={addOnName}')
     projGenParams.append (f'-DAC_API_DEVKIT_DIR={str (devKitFolder / "Support")}')
     projGenParams.append (f'-DAC_ADDON_LANGUAGE={languageCode}')
+
+    if release:
+        projGenParams.append ('-DAC_ADDON_FOR_DISTRIBUTION=ON')
+
+    if args.devKitPath is not None:
+        projGenParams.append ('-DAC_USE_LOCAL_DEVKIT=ON')
 
     if additionalParams and 'ADDITIONAL_INCLUDE_DIRS' in additionalParams and additionalParams['ADDITIONAL_INCLUDE_DIRS']:
         additionalIncludeDirList = [str(pathlib.Path(dir)) for dir in additionalParams['ADDITIONAL_INCLUDE_DIRS']]
@@ -264,18 +269,18 @@ def RunShellScript(script_path, bundle_path):
         sys.exit(1)
 
 
-def BuildAddOn (args, addOnName, platformName, additionalParams, workspaceRootFolder, buildFolder, devKitFolder, version, configuration, languageCode, releaseFlag, notarizeFlag, quiet):
+def BuildAddOn (args, addOnName, platformName, additionalParams, workspaceRootFolder, buildFolder, devKitFolder, version, configuration, languageCode, release, notarizeFlag, quiet):
     buildPath = buildFolder / addOnName / version / languageCode
 
     # Add params to configure cmake
-    projGenParams = GetProjectGenerationParams (args, workspaceRootFolder, buildPath, addOnName, platformName, devKitFolder, version, languageCode, additionalParams)
+    projGenParams = GetProjectGenerationParams (args, workspaceRootFolder, buildPath, platformName, devKitFolder, version, languageCode, release, additionalParams)
     projGenResult = CallCommand (projGenParams, quiet)
 
     if projGenResult != 0:
         raise Exception ('Failed to generate project!')
 
     # Add params to build AddOn
-    if releaseFlag:
+    if release:
         if not os.path.exists(buildPath):
             raise Exception ('Failed: Project file does not exit!')
 
@@ -320,7 +325,7 @@ def BuildAddOn (args, addOnName, platformName, additionalParams, workspaceRootFo
             bundlePath = buildPath / configuration / bundleFile
             RunShellScript(shPath, bundlePath)
 
-def BuildAddOns (args, addOnName, buildConfigList, languageList, additionalParams, workspaceRootFolder, buildFolder, devKitFolderList, releaseFlag, notarizeFlag, quiet):
+def BuildAddOns (args, addOnName, buildConfigList, languageList, additionalParams, workspaceRootFolder, buildFolder, devKitFolderList, release, notarizeFlag, quiet):
     platformName = GetPlatformName ()
 
     try:
@@ -329,7 +334,7 @@ def BuildAddOns (args, addOnName, buildConfigList, languageList, additionalParam
 
             for languageCode in languageList:
                 for config in buildConfigList:
-                    BuildAddOn (args, addOnName, platformName, additionalParams, workspaceRootFolder, buildFolder, devKitFolder, version, config, languageCode, releaseFlag, notarizeFlag, quiet)
+                    BuildAddOn (args, addOnName, platformName, additionalParams, workspaceRootFolder, buildFolder, devKitFolder, version, config, languageCode, release, notarizeFlag, quiet)
 
     except Exception as e:
         raise e
