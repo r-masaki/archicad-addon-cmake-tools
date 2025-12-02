@@ -400,40 +400,41 @@ def PackageAddOns (args, devKitData, addOnName, buildConfigList, acVersionList, 
                         str (packageRootFolder / version / languageCode / config / '*')
                     ], args.quiet)
 
-def CopyResultTo (copyToFolder, buildFolder, version, addOnName, configuration, languageCode, notarizeFlag):
+def CopyResultTo (copyToFolder, buildFolder, version, addOnName, buildConfigList, languageCode, notarizeFlag):
 
     if not copyToFolder.exists():
         copyToFolder.mkdir(parents=True)
 
     platformName = GetPlatformName ()
     
-    if platformName == 'WIN':
-        sourceFolder = buildFolder / addOnName / version / languageCode / configuration
-
-        dst_apx = copyToFolder / f'{addOnName}.apx'
-        if dst_apx.exists():
-            dst_apx.unlink()
-        shutil.copy(
-            sourceFolder / f'{addOnName}.apx',
-            dst_apx,
-        )
-    elif platformName == 'MAC':
-        if notarizeFlag:
-            sourceFolder = buildFolder / addOnName / version / languageCode / configuration / "notarized"
-        else:
+    for configuration in buildConfigList:
+        if platformName == 'WIN':
             sourceFolder = buildFolder / addOnName / version / languageCode / configuration
 
-        dst_bundle = copyToFolder / f'{addOnName}.bundle'
-        if dst_bundle.exists():
-            if dst_bundle.is_dir():
-                shutil.rmtree(dst_bundle)
+            dst_apx = copyToFolder / f'{addOnName}.apx'
+            if dst_apx.exists():
+                dst_apx.unlink()
+            shutil.copy(
+                sourceFolder / f'{addOnName}.apx',
+                dst_apx,
+            )
+        elif platformName == 'MAC':
+            if notarizeFlag:
+                sourceFolder = buildFolder / addOnName / version / languageCode / configuration / "notarized"
             else:
-                dst_bundle.unlink()
-        subprocess.call([
-            'cp', '-R',
-            sourceFolder / f'{addOnName}.bundle',
-            dst_bundle
-        ])
+                sourceFolder = buildFolder / addOnName / version / languageCode / configuration
+
+            dst_bundle = copyToFolder / f'{addOnName}.bundle'
+            if dst_bundle.exists():
+                if dst_bundle.is_dir():
+                    shutil.rmtree(dst_bundle)
+                else:
+                    dst_bundle.unlink()
+            subprocess.call([
+                'cp', '-R',
+                sourceFolder / f'{addOnName}.bundle',
+                dst_bundle
+            ])
 
 
 def Main ():
@@ -470,7 +471,7 @@ def Main ():
             copyToFolder = pathlib.Path(args.copyTo)
             for version in devKitFolderList:
                 for languageCode in languageList:
-                    CopyResultTo(copyToFolder, buildFolder, version, addOnName, 'Release', languageCode, args.notarize)
+                    CopyResultTo(copyToFolder, buildFolder, version, addOnName, buildConfigList, languageCode, args.notarize)
 
         print ('Build succeeded!')
         sys.exit (0)
