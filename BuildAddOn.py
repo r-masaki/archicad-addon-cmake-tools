@@ -27,6 +27,7 @@ def ParseArguments ():
     parser.add_argument ('-a', '--additionalCMakeParams', dest = 'additionalCMakeParams', nargs = '+', required = False, help = 'Add-On specific CMake parameter list of key=value pairs. Ex: var1=value1 var2="value 2"')
     parser.add_argument ('-q', '--quiet', dest = 'quiet', required = False, action='store_true', help = 'Less verbose cmake output.')
     parser.add_argument('--copyTo', dest='copyTo', type=str, required=False, help='Copy built add-on to specified directory after build')
+    parser.add_argument('--converter', dest='converter', type=str, required=False, help='Path to LP_XMLConverter.exe')
     args = parser.parse_args ()
 
     # if args.devKitPath is not None:
@@ -449,13 +450,13 @@ def Main ():
 
         BuildAddOns (args, addOnName, buildConfigList, languageList, additionalParams, workspaceRootFolder, buildFolder, devKitFolderList, args.release, args.notarize, args.quiet)
 
-        # Add empty config file
+        # Add config file
         if useBuiltinFlag:
-            libConfig = {
-                "LPXML_Converter_Path": ""
-            }
-
             filePath = workspaceRootFolder / 'aclibconfig.json'
+            converterPath = pathlib.Path(args.converter) if args.converter else None
+            libConfig = {
+                "LPXML_Converter_Path": str(converterPath) if converterPath else ""
+            }
 
             if not filePath.exists():
                 with open(filePath, "w") as f:
