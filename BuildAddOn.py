@@ -13,6 +13,9 @@ import urllib.request
 import zipfile
 import tarfile
 
+import ssl
+ssl._create_default_https_context = ssl._create_unverified_context
+
 def ParseArguments ():
     parser = argparse.ArgumentParser ()
     parser.add_argument ('--notarize', required = False, action='store_true', help = 'Build add-on with Release mode and notarization for only macOSX')
@@ -164,36 +167,58 @@ def PrepareDirectories (args, devKitData, addOnName, acVersionList):
 
     return [workspaceRootFolder, buildFolder, packageRootFolder, devKitFolderList]
 
-def _extract_zip_strip_top(zip_path: pathlib.Path, dest: pathlib.Path) -> None:
+def _extract_archive_flat(archive_path: pathlib.Path, dest: pathlib.Path) -> None:
+    dest = pathlib.Path(dest)
     dest.mkdir(parents=True, exist_ok=True)
-    zip_base_name = zip_path.stem  # 例: LP_XMLConverter.WIN.29.3000.zip → LP_XMLConverter.WIN.29.3000
 
-    with zipfile.ZipFile(zip_path, 'r') as z:
-        names = z.namelist()
+    base_name = archive_path.stem  # 例: LP_XMLConverter.MAC.29.3000
+    tmp_dir   = dest / (base_name + "__tmp_unpack__")
 
-        top_dirs = {n.split('/')[0] for n in names if n.strip('/')}
+    # 一時ディレクトリを作り直す
+    if tmp_dir.exists():
+        shutil.rmtree(tmp_dir)
+    tmp_dir.mkdir(parents=True, exist_ok=True)
 
-        if len(top_dirs) == 1 and list(top_dirs)[0] == zip_base_name:
-            top = zip_base_name + "/"
-            print(f"Top-level folder '{top}' matches ZIP name — extracting contents only.")
+    # まず一時ディレクトリに丸ごと展開
+    if zipfile.is_zipfile(archive_path):
+        with zipfile.ZipFile(archive_path, "r") as zf:
+            zf.extractall(tmp_dir)
+    elif tarfile.is_tarfile(archive_path):
+        with tarfile.open(archive_path, "r:*") as tf:
+            tf.extractall(tmp_dir)
+    else:
+        raise RuntimeError(f"Unknown archive format: {archive_path}")
 
-            for member in names:
-                if not member.startswith(top):
-                    continue
+    # 一時ディレクトリ直下の「実質的な」エントリ一覧
+    def is_real_entry(p: pathlib.Path) -> bool:
+        # __MACOSX と隠しファイル/フォルダは無視
+        if p.name == "__MACOSX":
+            return False
+        if p.name.startswith("."):
+            return False
+        return True
 
-                rel_path = member[len(top):]
+    entries = [p for p in tmp_dir.iterdir() if is_real_entry(p)]
 
-                if not rel_path or member.endswith('/'):
-                    continue
+    # パターン1: base_name と同名のフォルダ 1個だけ → その中身だけを使う
+    if len(entries) == 1 and entries[0].is_dir() and entries[0].name == base_name:
+        root = entries[0]
+        move_sources = [p for p in root.iterdir() if is_real_entry(p)]
+    else:
+        move_sources = entries
 
-                target = dest / rel_path
-                target.parent.mkdir(parents=True, exist_ok=True)
+    # dest に中身を移動（既存があれば上書き）
+    for src in move_sources:
+        target = dest / src.name
+        if target.exists():
+            if target.is_dir():
+                shutil.rmtree(target)
+            else:
+                target.unlink()
+        shutil.move(str(src), str(target))
 
-                with z.open(member) as src, open(target, 'wb') as dst_f:
-                    shutil.copyfileobj(src, dst_f)
-
-        else:
-            z.extractall(dest)
+    # 一時ディレクトリを削除
+    shutil.rmtree(tmp_dir)
             
 
 def DownloadAndUnzip (url, dest):
@@ -211,11 +236,8 @@ def DownloadAndUnzip (url, dest):
 
     print(f'Extracting {fileName}')
 
-    if zipfile.is_zipfile(filePath):
-        _extract_zip_strip_top(filePath, dest)
-    elif tarfile.is_tarfile(filePath):
-        with tarfile.open(filePath, 'r:*') as tar:
-            tar.extractall(path=dest)
+    if zipfile.is_zipfile(filePath) or tarfile.is_tarfile(filePath):
+        _extract_archive_flat(filePath, dest)
     else:
         raise RuntimeError(f"Unknown archive format or not an archive: {filePath}")
 
@@ -472,12 +494,25 @@ def CopyResultTo (copyToFolder, buildFolder, version, addOnName, buildConfigList
 
 def AddConfigFileForBuiltinLibraryUsage(workspaceRootFolder, buildFolder, acVersionList, args):
     filePath = workspaceRootFolder / 'aclibconfig.json'
+    aclibconfigData = {}
+    
+    # read existing config file
+    if filePath.exists():
+        # Load config data
+        aclibconfig = pathlib.Path (filePath)
+        with open (aclibconfig, 'r') as configFile:
+            aclibconfigData = json.load (configFile)
 
     # Set LP_Xmlconverter directory if local is used, else create new directories
-    converterPath = pathlib.Path(args.converter) if args.converter else None
+    if args.converter:
+        converterPath = pathlib.Path(args.converter) if args.converter else None
+    elif 'LPXML_Converter_Path' in aclibconfigData:
+        converterPath = pathlib.Path(aclibconfigData['LPXML_Converter_Path']) if aclibconfigData['LPXML_Converter_Path'] else None
+    else:
+        converterPath = None
 
     # Download LP_XMLConverter if path not provided
-    if converterPath is None:
+    if converterPath is None :
         platformName = GetPlatformName ()
         # Load LP_XMLConverter download data
         converterDataPath = pathlib.Path (__file__).absolute ().parent / 'LP_XMLConverterLinks.json'
@@ -489,6 +524,13 @@ def AddConfigFileForBuiltinLibraryUsage(workspaceRootFolder, buildFolder, acVers
                 converterFolder = buildFolder / 'LP_XMLConverter' / f'LP_XMLConverter-{version}'
                 if not converterFolder.exists ():
                     converterFolder.mkdir (parents=True)
+                else:
+                    # delete existing contents in converterFolder
+                    for item in converterFolder.iterdir():
+                        if item.is_dir():
+                            shutil.rmtree(item)
+                        else:
+                            item.unlink()
 
                 DownloadAndUnzip (converterData[platformName][version], converterFolder)
                 if platformName == 'WIN':
