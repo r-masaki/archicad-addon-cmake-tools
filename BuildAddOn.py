@@ -164,31 +164,64 @@ def PrepareDirectories (args, devKitData, addOnName, acVersionList):
 
     return [workspaceRootFolder, buildFolder, packageRootFolder, devKitFolderList]
 
+def _extract_zip_strip_top(zip_path: pathlib.Path, dest: pathlib.Path) -> None:
+    dest.mkdir(parents=True, exist_ok=True)
+    zip_base_name = zip_path.stem  # 例: LP_XMLConverter.WIN.29.3000.zip → LP_XMLConverter.WIN.29.3000
+
+    with zipfile.ZipFile(zip_path, 'r') as z:
+        names = z.namelist()
+
+        top_dirs = {n.split('/')[0] for n in names if n.strip('/')}
+
+        if len(top_dirs) == 1 and list(top_dirs)[0] == zip_base_name:
+            top = zip_base_name + "/"
+            print(f"Top-level folder '{top}' matches ZIP name — extracting contents only.")
+
+            for member in names:
+                if not member.startswith(top):
+                    continue
+
+                rel_path = member[len(top):]
+
+                if not rel_path or member.endswith('/'):
+                    continue
+
+                target = dest / rel_path
+                target.parent.mkdir(parents=True, exist_ok=True)
+
+                with z.open(member) as src, open(target, 'wb') as dst_f:
+                    shutil.copyfileobj(src, dst_f)
+
+        else:
+            z.extractall(dest)
+            
 
 def DownloadAndUnzip (url, dest):
-    fileName = url.split ('/')[-1]
-    filePath = pathlib.Path (dest, fileName)
-    if filePath.exists ():
-        return
+    dest = pathlib.Path(dest)
+    dest.mkdir(parents=True, exist_ok=True)
 
-    print (f'Downloading {fileName}')
-    urllib.request.urlretrieve (url, filePath)
+    fileName = url.split('/')[-1]
+    filePath = dest / fileName
 
-    print (f'Extracting {fileName}')
+    if not filePath.exists():
+        print(f'Downloading {fileName}')
+        urllib.request.urlretrieve(url, filePath)
+    else:
+        print(f'{fileName} already exists, skipping download')
 
-    if platform.system () == 'Windows':
-        if zipfile.is_zipfile (filePath):
-            with zipfile.ZipFile (filePath, 'r') as zip:
-                zip.extractall (path=dest)
-    elif platform.system () == 'Darwin':
-        if tarfile.is_tarfile (filePath):
-            with tarfile.open (filePath, 'r:gz') as tar:
-                tar.extractall (path=dest)
-        else:
-            CallCommand ([
-            'unzip', '-qq', filePath,
-            '-d', dest
-        ])
+    print(f'Extracting {fileName}')
+
+    if zipfile.is_zipfile(filePath):
+        _extract_zip_strip_top(filePath, dest)
+    elif tarfile.is_tarfile(filePath):
+        with tarfile.open(filePath, 'r:*') as tar:
+            tar.extractall(path=dest)
+    else:
+        raise RuntimeError(f"Unknown archive format or not an archive: {filePath}")
+
+    if filePath.exists():
+            print(f"Deleting zip file: {filePath}")
+            filePath.unlink()
 
 
 def GetInstalledVisualStudioGenerator ():
@@ -437,6 +470,48 @@ def CopyResultTo (copyToFolder, buildFolder, version, addOnName, buildConfigList
                 dst_bundle
             ])
 
+def AddConfigFileForBuiltinLibraryUsage(workspaceRootFolder, buildFolder, acVersionList, args):
+    filePath = workspaceRootFolder / 'aclibconfig.json'
+
+    # Set LP_Xmlconverter directory if local is used, else create new directories
+    converterPath = pathlib.Path(args.converter) if args.converter else None
+
+    # Download LP_XMLConverter if path not provided
+    if converterPath is None:
+        platformName = GetPlatformName ()
+        # Load LP_XMLConverter download data
+        converterDataPath = pathlib.Path (__file__).absolute ().parent / 'LP_XMLConverterLinks.json'
+        with open (converterDataPath, 'r') as converterDataFile:
+            converterData = json.load (converterDataFile)
+            
+        for version in acVersionList:
+            if version in converterData[platformName]:
+                converterFolder = buildFolder / 'LP_XMLConverter' / f'LP_XMLConverter-{version}'
+                if not converterFolder.exists ():
+                    converterFolder.mkdir (parents=True)
+
+                DownloadAndUnzip (converterData[platformName][version], converterFolder)
+                if platformName == 'WIN':
+                    converterPath = converterFolder / 'LP_XMLConverter.exe'
+                elif platformName == 'MAC':
+                    converterPath = converterFolder / 'LP_XMLConverter.app/Contents/MacOS/LP_XMLConverter'
+                break
+            else:
+                raise Exception ('LP_XMLConverter download link not provided!')
+
+
+    libConfig = {
+        "LPXML_Converter_Path": str(converterPath) if converterPath else ""
+    }
+
+    if not filePath.exists():
+        with open(filePath, "w") as f:
+            json.dump(libConfig, f, indent=4)
+        print("Config file created:", filePath)
+    else:
+        print("Config file already exists:", filePath)
+
+
 
 def Main ():
     try:
@@ -448,22 +523,10 @@ def Main ():
 
         os.chdir (workspaceRootFolder)
 
+        if useBuiltinFlag:             
+            AddConfigFileForBuiltinLibraryUsage(workspaceRootFolder, buildFolder, acVersionList, args)
+
         BuildAddOns (args, addOnName, buildConfigList, languageList, additionalParams, workspaceRootFolder, buildFolder, devKitFolderList, args.release, args.notarize, args.quiet)
-
-        # Add config file
-        if useBuiltinFlag:
-            filePath = workspaceRootFolder / 'aclibconfig.json'
-            converterPath = pathlib.Path(args.converter) if args.converter else None
-            libConfig = {
-                "LPXML_Converter_Path": str(converterPath) if converterPath else ""
-            }
-
-            if not filePath.exists():
-                with open(filePath, "w") as f:
-                    json.dump(libConfig, f, indent=4)
-                print("Config file created:", filePath)
-            else:
-                print("Config file already exists:", filePath)
 
         if args.package:
             PackageAddOns (args, devKitData, addOnName, buildConfigList, acVersionList, languageList, buildFolder, packageRootFolder)

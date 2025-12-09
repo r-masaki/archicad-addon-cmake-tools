@@ -1,0 +1,8 @@
+{
+    "WIN": {
+        "29": "https://github.com/GRAPHISOFT/archicad-api-devkit/releases/download/29.3000/LP_XMLConverter.WIN.29.3000.zip"
+    },
+    "MAC": {
+        "29": "https://github.com/GRAPHISOFT/archicad-api-devkit/releases/download/29.3000/LP_XMLConverter.MAC.29.3000.zip"
+    }
+}
