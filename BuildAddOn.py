@@ -539,6 +539,12 @@ def AddConfigFileForBuiltinLibraryUsage(workspaceRootFolder, buildFolder, acVers
                     converterPath = converterFolder / 'LP_XMLConverter.exe'
                 elif platformName == 'MAC':
                     converterPath = converterFolder / 'LP_XMLConverter.app/Contents/MacOS/LP_XMLConverter'
+                    if converterPath.exists():
+                        mode = converterPath.stat().st_mode
+                        os.chmod(
+                            converterPath,
+                            mode | stat.S_IXUSR | stat.S_IXGRP | stat.S_IXOTH
+                        )
                 break
             else:
                 raise Exception ('LP_XMLConverter download link not provided!')
