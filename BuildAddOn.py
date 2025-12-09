@@ -31,6 +31,8 @@ def ParseArguments ():
     parser.add_argument ('-q', '--quiet', dest = 'quiet', required = False, action='store_true', help = 'Less verbose cmake output.')
     parser.add_argument('--copyTo', dest='copyTo', type=str, required=False, help='Copy built add-on to specified directory after build')
     parser.add_argument('--converter', dest='converter', type=str, required=False, help='Path to LP_XMLConverter.exe')
+    parser.add_argument('--autotest', dest='autotest', action='store_true', required=False, help='Flag to indicate autotest run (not used currently)')
+
     args = parser.parse_args ()
 
     # if args.devKitPath is not None:
@@ -289,7 +291,7 @@ def GetProjectGenerationParams (args, workspaceRootFolder, buildPath, platformNa
     projGenParams.append (f'-DAC_API_DEVKIT_DIR={str (devKitFolder / "Support")}')
     projGenParams.append (f'-DAC_ADDON_LANGUAGE={languageCode}')
 
-    if release:
+    if release and not args.autotest:
         projGenParams.append ('-DAC_ADDON_FOR_DISTRIBUTION=ON')
 
     if args.devKitPath is not None:
@@ -495,7 +497,7 @@ def CopyResultTo (copyToFolder, buildFolder, version, addOnName, buildConfigList
 def AddConfigFileForBuiltinLibraryUsage(workspaceRootFolder, buildFolder, acVersionList, args):
     filePath = workspaceRootFolder / 'aclibconfig.json'
     aclibconfigData = {}
-    
+
     # read existing config file
     if filePath.exists():
         # Load config data

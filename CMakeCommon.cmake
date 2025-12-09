@@ -341,7 +341,7 @@ function (GenerateAddOnProject target acVersion devKitDir addOnSourcesFolder add
             BUNDLE TRUE
             LIBRARY_OUTPUT_DIRECTORY "${CMAKE_BINARY_DIR}/\$<CONFIG>"
         )
-        if ((NOT codesignIdentity STREQUAL "") AND (NOT developmentTeamId STREQUAL ""))
+        if ((NOT codesignIdentity STREQUAL "") AND (NOT developmentTeamId STREQUAL "") AND AC_ADDON_FOR_DISTRIBUTION)
             set_target_properties("${target}" PROPERTIES
                 XCODE_ATTRIBUTE_CODE_SIGN_IDENTITY "${codesignIdentity}"
                                 XCODE_ATTRIBUTE_CODE_SIGN_STYLE "Manual"
