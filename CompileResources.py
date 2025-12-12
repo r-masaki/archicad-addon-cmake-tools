@@ -43,19 +43,26 @@ class ResourceCompiler (object):
         inputFileBaseName = os.path.splitext (os.path.split (inputFilePath)[1])[0]
         nativeResourceFilePath = os.path.join (self.resourceObjectsPath, inputFileBaseName + nativeResourceFileExtenion)
         colorChangeScriptPath = os.path.join (os.path.dirname (self.resConvPath), 'SVGColorChange.py')
-        result = subprocess.call ([
+        cmd = [
             self.resConvPath,
             '-m', 'r',                        # resource compile mode
-            '-T', platformSign,                # target platform
-            '-c', '0',                         # code page conversion for JPN
-            '-q', 'utf8', 'utf8',            # code page conversion
+            '-T', platformSign,               # target platform
+            '-c', '0',                        # code page conversion for JPN
+            '-q', 'utf8', 'utf8',             # code page conversion
             '-w', '2',                        # HiDPI image size list
-            '-p', imageResourcesFolder,        # image search path
-            '-i', inputFilePath,            # input path
-            '-o', nativeResourceFilePath,    # output path
-			'-py', sys.executable,				# python executable
-			'-sc', colorChangeScriptPath,		# SVG color change script path for generating Dark Mode icons
-        ])
+            '-p', imageResourcesFolder,       # image search path
+            '-i', inputFilePath,              # input path
+            '-o', nativeResourceFilePath,     # output path
+        ]
+
+        # Add optional SVG color change script only if it exists
+        if os.path.exists(colorChangeScriptPath):
+            cmd += [
+                '-py', sys.executable,        # python executable
+                '-sc', colorChangeScriptPath  # SVG color change script
+            ]
+
+        result = subprocess.call(cmd)
         if result != 0:
             return False
         return True
