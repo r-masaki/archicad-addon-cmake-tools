@@ -42,6 +42,7 @@ class ResourceCompiler (object):
         imageResourcesFolder = os.path.join (self.resourcesPath, 'RFIX', 'Images')
         inputFileBaseName = os.path.splitext (os.path.split (inputFilePath)[1])[0]
         nativeResourceFilePath = os.path.join (self.resourceObjectsPath, inputFileBaseName + nativeResourceFileExtenion)
+        colorChangeScriptPath = os.path.join (os.path.dirname (self.resConvPath), 'SVGColorChange.py')
         result = subprocess.call ([
             self.resConvPath,
             '-m', 'r',                        # resource compile mode
@@ -51,7 +52,9 @@ class ResourceCompiler (object):
             '-w', '2',                        # HiDPI image size list
             '-p', imageResourcesFolder,        # image search path
             '-i', inputFilePath,            # input path
-            '-o', nativeResourceFilePath    # output path
+            '-o', nativeResourceFilePath,    # output path
+			'-py', sys.executable,				# python executable
+			'-sc', colorChangeScriptPath,		# SVG color change script path for generating Dark Mode icons
         ])
         if result != 0:
             return False
