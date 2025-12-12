@@ -12,17 +12,23 @@ exclude_extensions = ['.tif', '.svg', '.png', '.jpg', '.jpeg', '.gif', '.bmp', '
 def run_application(converterPath, srcPath, destPath):
 
     try:
-        subprocess.call([
-            converterPath,
+        result = subprocess.run([
+            str(converterPath),
             "hsf2l",
-            srcPath,
-            destPath
+            str(srcPath),
+            str(destPath)
         ])
 
-        print("MakeLib Successed")
+        if result.returncode == 0:
+            print("MakeLib Succeeded")
+            return True
+        else:
+            print(f"MakeLib Failed: converter returned non-zero exit status {result.returncode}")
+            return False
 
     except Exception as e:
         print("MakeLib Failed:", e)
+        return False
 
 
 
@@ -69,7 +75,26 @@ def Main (argv):
 
     if os.path.exists(target_folder_path):
         try:
-            converterPath =  pathlib.Path (configData['LPXML_Converter_Path'])
+            converterPath = pathlib.Path (configData['LPXML_Converter_Path'])
+
+            if sys.platform == "darwin" and converterPath.suffix == ".app":
+                bin_path = converterPath / "Contents" / "MacOS" / converterPath.stem
+                if bin_path.exists():
+                    converterPath = bin_path
+                else:
+                    # 念のため MacOS フォルダ内の何か1つを候補にする
+                    macos_dir = converterPath / "Contents" / "MacOS"
+                    if macos_dir.exists():
+                        candidates = list(macos_dir.glob("*"))
+                        if len(candidates) == 1:
+                            converterPath = candidates[0]
+                        else:
+                            print(f"Could not determine converter binary inside: {macos_dir}")
+                            sys.exit(1)
+                    else:
+                        print(f"Invalid .app bundle, missing MacOS folder: {macos_dir}")
+                        sys.exit(1)
+
             if not os.path.exists(converterPath):
                 print("Not found LPXML_Converter. Please set proper path to LP_XMLConverter")
                 sys.exit(1)
@@ -79,20 +104,22 @@ def Main (argv):
             srcPath = pathlib.Path (src_folder_name)
             destPath = pathlib.Path (dest_folder_name)
 
-            run_application(converterPath, srcPath, destPath)
+            ok = run_application(converterPath, srcPath, destPath)
+            if not ok:
+                sys.exit(1)
 
             # create Images folder if not exist
-            if not os.path.exists(current_file_path / 'RFIX'/'Images'):
-                os.makedirs(current_file_path / 'RFIX'/'Images')
+            images_dir = current_file_path / 'RFIX' / 'Images'
+            if not os.path.exists(images_dir):
+                os.makedirs(images_dir)
 
             # copy files to Images folder
-            imagePath = pathlib.Path(current_file_path / 'RFIX'/'Images')
+            imagePath = pathlib.Path(images_dir)
             copy_folder_contents(destPath, imagePath)
 
-
         except Exception as e:
-                print (e)
-                sys.exit (1)
+            print (e)
+            sys.exit (1)
 
     else:
         print ("Skip MakeLib: Not found ACLib folder")

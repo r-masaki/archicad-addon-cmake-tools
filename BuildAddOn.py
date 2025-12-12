@@ -170,19 +170,24 @@ def PrepareDirectories (args, devKitData, addOnName, acVersionList):
 
     return [workspaceRootFolder, buildFolder, packageRootFolder, devKitFolderList]
 
-def _extract_archive_flat(archive_path: pathlib.Path, dest: pathlib.Path) -> None:
+def _extract_archive_no_flat(archive_path: pathlib.Path, dest: pathlib.Path) -> pathlib.Path | None:
+    """
+    ZIP/TAR をフラット化せずにそのまま展開し、
+    展開先ディレクトリから LP_XMLConverter.app を探してパスを返す。
+    見つからなければ None を返す。
+    """
     dest = pathlib.Path(dest)
     dest.mkdir(parents=True, exist_ok=True)
 
-    base_name = archive_path.stem  # 例: LP_XMLConverter.MAC.29.3000
-    tmp_dir   = dest / (base_name + "__tmp_unpack__")
+    base_name = archive_path.stem
+    tmp_dir = dest / (base_name + "__tmp_unpack__")
 
-    # 一時ディレクトリを作り直す
+    # 一時ディレクトリをクリーンに
     if tmp_dir.exists():
         shutil.rmtree(tmp_dir)
     tmp_dir.mkdir(parents=True, exist_ok=True)
 
-    # まず一時ディレクトリに丸ごと展開
+    # --- 展開 ---
     if zipfile.is_zipfile(archive_path):
         with zipfile.ZipFile(archive_path, "r") as zf:
             zf.extractall(tmp_dir)
@@ -192,61 +197,45 @@ def _extract_archive_flat(archive_path: pathlib.Path, dest: pathlib.Path) -> Non
     else:
         raise RuntimeError(f"Unknown archive format: {archive_path}")
 
-    # 一時ディレクトリ直下の「実質的な」エントリ一覧
-    def is_real_entry(p: pathlib.Path) -> bool:
-        # __MACOSX と隠しファイル/フォルダは無視
-        if p.name == "__MACOSX":
-            return False
-        if p.name.startswith("."):
-            return False
-        return True
+    # --- フラット化しない。tmp_dir を丸ごと dest に移動 ---
+    target_root = dest / base_name
+    if target_root.exists():
+        shutil.rmtree(target_root)
 
-    entries = [p for p in tmp_dir.iterdir() if is_real_entry(p)]
+    shutil.move(str(tmp_dir), str(target_root))
 
-    # パターン1: base_name と同名のフォルダ 1個だけ → その中身だけを使う
-    if len(entries) == 1 and entries[0].is_dir() and entries[0].name == base_name:
-        root = entries[0]
-        move_sources = [p for p in root.iterdir() if is_real_entry(p)]
-    else:
-        move_sources = entries
+    return None
 
-    # dest に中身を移動（既存があれば上書き）
-    for src in move_sources:
-        target = dest / src.name
-        if target.exists():
-            if target.is_dir():
-                shutil.rmtree(target)
-            else:
-                target.unlink()
-        shutil.move(str(src), str(target))
 
-    # 一時ディレクトリを削除
-    shutil.rmtree(tmp_dir)
-            
+def DownloadAndUnzip(url, dest):
+    fileName = url.split ('/')[-1]
+    filePath = pathlib.Path (dest, fileName)
+    if filePath.exists ():
+        return
 
-def DownloadAndUnzip (url, dest):
-    dest = pathlib.Path(dest)
-    dest.mkdir(parents=True, exist_ok=True)
+    print (f'Downloading {fileName}')
+    urllib.request.urlretrieve (url, filePath)
 
-    fileName = url.split('/')[-1]
-    filePath = dest / fileName
+    print (f'Extracting {fileName}')
 
-    if not filePath.exists():
-        print(f'Downloading {fileName}')
-        urllib.request.urlretrieve(url, filePath)
-    else:
-        print(f'{fileName} already exists, skipping download')
+    if platform.system () == 'Windows':
+        if zipfile.is_zipfile (filePath):
+            with zipfile.ZipFile (filePath, 'r') as zip:
+                zip.extractall (path=dest)
+    elif platform.system () == 'Darwin':
+        if tarfile.is_tarfile (filePath):
+            with tarfile.open (filePath, 'r:gz') as tar:
+                tar.extractall (path=dest)
+        else:
+            CallCommand ([
+            'unzip', '-qq', filePath,
+            '-d', dest
+        ])
 
-    print(f'Extracting {fileName}')
-
-    if zipfile.is_zipfile(filePath) or tarfile.is_tarfile(filePath):
-        _extract_archive_flat(filePath, dest)
-    else:
-        raise RuntimeError(f"Unknown archive format or not an archive: {filePath}")
-
+    # zip を削除
     if filePath.exists():
-            print(f"Deleting zip file: {filePath}")
-            filePath.unlink()
+        print(f"Deleting zip file: {filePath}")
+        filePath.unlink()
 
 
 def GetInstalledVisualStudioGenerator ():
@@ -495,6 +484,38 @@ def CopyResultTo (copyToFolder, buildFolder, version, addOnName, buildConfigList
                 dst_bundle
             ])
 
+def FindConverter(converterFolder: pathlib.Path, platformName: str) -> pathlib.Path | None:
+    root = pathlib.Path(converterFolder)
+    plat = platformName.upper()
+
+    # Windows: exe を探す
+    if plat == 'WIN':
+        exe = next(root.rglob("LP_XMLConverter.exe"), None)
+        if exe is not None:
+            return exe
+        return None
+
+    # mac: .app → 中のバイナリ
+    if plat == 'MAC':
+        app = next(root.rglob("LP_XMLConverter.app"), None)
+        if app is None:
+            return None
+
+        bin_path = app / "Contents" / "MacOS" / "LP_XMLConverter"
+        if not bin_path.exists():
+            return None
+
+        # 実行権限付与
+        mode = bin_path.stat().st_mode
+        os.chmod(
+            bin_path,
+            mode | stat.S_IXUSR | stat.S_IXGRP | stat.S_IXOTH
+        )
+        return bin_path
+
+    # それ以外のプラットフォームは未対応
+    return None
+
 def AddConfigFileForBuiltinLibraryUsage(workspaceRootFolder, buildFolder, acVersionList, args):
     filePath = workspaceRootFolder / 'aclibconfig.json'
     aclibconfigData = {}
@@ -536,16 +557,9 @@ def AddConfigFileForBuiltinLibraryUsage(workspaceRootFolder, buildFolder, acVers
                             item.unlink()
 
                 DownloadAndUnzip (converterData[platformName][version], converterFolder)
-                if platformName == 'WIN':
-                    converterPath = converterFolder / 'LP_XMLConverter.exe'
-                elif platformName == 'MAC':
-                    converterPath = converterFolder / 'LP_XMLConverter.app/Contents/MacOS/LP_XMLConverter'
-                    if converterPath.exists():
-                        mode = converterPath.stat().st_mode
-                        os.chmod(
-                            converterPath,
-                            mode | stat.S_IXUSR | stat.S_IXGRP | stat.S_IXOTH
-                        )
+
+                converterPath = FindConverter(converterFolder, platformName)
+
                 break
             else:
                 raise Exception ('LP_XMLConverter download link not provided!')
