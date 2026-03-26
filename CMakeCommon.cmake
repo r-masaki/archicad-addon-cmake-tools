@@ -313,7 +313,16 @@ function (GenerateAddOnProject target acVersion devKitDir addOnSourcesFolder add
         ${ResourceStampFile}
     )
     
-    source_group ("Sources" FILES ${AddOnHeaderFiles} ${AddOnSourceFiles})
+
+    # --- folder structure in IDE (Visual Studio / Xcode) ---
+    # Keep Src subtree as-is under a "Sources" root folder.
+    # (CMake >= 3.8 supports source_group(TREE ...))
+    source_group(
+        TREE   "${AddOnSourcesFolderAbsolute}"
+        PREFIX "Sources"
+        FILES  ${AddOnHeaderFiles} ${AddOnSourceFiles}
+    )
+
     source_group ("Images" FILES ${AddOnImageFiles})
     source_group ("Resources" FILES ${AddOnResourceFiles} ${AddOnJSONResourceFiles} ${AddOnXLIFFFiles})
     if (WIN32)
