@@ -520,12 +520,12 @@ def AddConfigFileForBuiltinLibraryUsage(workspaceRootFolder, buildFolder, acVers
     filePath = workspaceRootFolder / 'aclibconfig.json'
     aclibconfigData = {}
 
-    # read existing config file
     if filePath.exists():
-        # Load config data
         aclibconfig = pathlib.Path (filePath)
         with open (aclibconfig, 'r') as configFile:
             aclibconfigData = json.load (configFile)
+        print("Config file already exists:", filePath)
+        return
 
     # Set LP_Xmlconverter directory if local is used, else create new directories
     if args.converter:
@@ -562,19 +562,15 @@ def AddConfigFileForBuiltinLibraryUsage(workspaceRootFolder, buildFolder, acVers
 
                 break
             else:
-                raise Exception ('LP_XMLConverter download link not provided!')
+                converterPath = None
 
 
-    libConfig = {
-        "LPXML_Converter_Path": str(converterPath) if converterPath else ""
-    }
+    libConfig = aclibconfigData.copy()
+    libConfig["LPXML_Converter_Path"] = str(converterPath) if converterPath else ""
 
-    if not filePath.exists():
-        with open(filePath, "w") as f:
-            json.dump(libConfig, f, indent=4)
-        print("Config file created:", filePath)
-    else:
-        print("Config file already exists:", filePath)
+    with open(filePath, "w") as f:
+        json.dump(libConfig, f, indent=4)
+    print("Config file created:", filePath)
 
 
 
