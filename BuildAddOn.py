@@ -258,7 +258,7 @@ def GetInstalledVisualStudioGenerator ():
 def GetToolset (version):
     if version < 25:
         return 'v141'
-    if version <= 29:
+    if version < 29:
         return 'v142'
     return 'v143'
 
