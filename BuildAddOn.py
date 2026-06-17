@@ -328,50 +328,49 @@ def BuildAddOn (args, addOnName, platformName, additionalParams, workspaceRootFo
         raise Exception ('Failed to generate project!')
 
     # Add params to build AddOn
+    if not os.path.exists(buildPath):
+        raise Exception ('Failed: Project file does not exit!')
+
+    # For release builds, force clean on macOS and pass clean-first to cmake.
+    if release and buildPath.exists() and platformName == 'MAC':
+        xcodeproj_path = buildPath / f"{addOnName}.xcodeproj"
+        if xcodeproj_path.exists():
+            subprocess.run([
+            'xcodebuild',
+            '-project', str(xcodeproj_path),
+            '-configuration', configuration,
+            'clean'
+            ], check=True)
+
+    buildParams = [
+        'cmake',
+        '--build', str (buildPath),
+        '--config', configuration,
+    ]
+
     if release:
-        if not os.path.exists(buildPath):
-            raise Exception ('Failed: Project file does not exit!')
+        buildParams.append('--clean-first')
 
-        # Clear build folder before building (Xcode: clean)
-        if buildPath.exists():
-            # For Xcode, use 'xcodebuild clean' to clear the build folder
-            if platformName == 'MAC':
-                xcodeproj_path = buildPath / f"{addOnName}.xcodeproj"
-                if xcodeproj_path.exists():
-                    subprocess.run([
-                    'xcodebuild',
-                    '-project', str(xcodeproj_path),
-                    '-configuration', configuration,
-                    'clean'
-                    ], check=True)
-                    
-        buildParams = [
-            'cmake',
-            '--build', str (buildPath),
-            '--config', configuration,
-            '--clean-first'
-        ]
+    buildResult = CallCommand (buildParams, quiet)
 
-        buildResult = CallCommand (buildParams, quiet)
+    if buildResult != 0:
+        raise Exception ('Failed to build project!')
 
-        if buildResult != 0:
-            raise Exception ('Failed to build project!')
+    platformName = GetPlatformName ()
 
-        platformName = GetPlatformName ()
+    # Open build folder
+    if platformName == 'WIN':
+        bundlePath = buildPath / configuration
+        subprocess.run(['explorer', bundlePath])
 
-        # Open build folder
-        if platformName == 'WIN':
-            bundlePath = buildPath / configuration
-            subprocess.run(['explorer', bundlePath])
-
-        if notarizeFlag and platformName == 'MAC':
-            # run notarize script
-            print('start notarization')
-            shPath = pathlib.Path (__file__).parent.absolute () / 'OSX' / 'Notarize.sh'
-            extension = 'bundle'
-            bundleFile = addOnName + "." + extension
-            bundlePath = buildPath / configuration / bundleFile
-            RunShellScript(shPath, bundlePath)
+    if notarizeFlag and platformName == 'MAC':
+        # run notarize script
+        print('start notarization')
+        shPath = pathlib.Path (__file__).parent.absolute () / 'OSX' / 'Notarize.sh'
+        extension = 'bundle'
+        bundleFile = addOnName + "." + extension
+        bundlePath = buildPath / configuration / bundleFile
+        RunShellScript(shPath, bundlePath)
 
 def BuildAddOns (args, addOnName, buildConfigList, languageList, additionalParams, workspaceRootFolder, buildFolder, devKitFolderList, release, notarizeFlag, quiet):
     platformName = GetPlatformName ()
