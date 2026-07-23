@@ -43,6 +43,11 @@ function (SetCompilerOptions target acVersion)
     else ()
         target_compile_options (${target} PUBLIC -Wall -Wextra -Werror
             -fvisibility=hidden
+
+            # Debugビルド用
+            "$<$<CONFIG:Debug>:-g>"
+            "$<$<CONFIG:Debug>:-O0>"
+
             -Wno-multichar
             -Wno-ctor-dtor-privacy
             -Wno-invalid-offsetof
@@ -329,6 +334,31 @@ function (GenerateAddOnProject target acVersion devKitDir addOnSourcesFolder add
         add_library (${target} SHARED ${AddOnFiles})
     else ()
         add_library (${target} MODULE ${AddOnFiles})
+    endif ()
+
+    if (APPLE)
+        set_target_properties (
+            "${target}"
+            PROPERTIES
+
+            "XCODE_ATTRIBUTE_GCC_GENERATE_DEBUGGING_SYMBOLS[variant=Debug]"
+            "YES"
+
+            "XCODE_ATTRIBUTE_DEBUG_INFORMATION_FORMAT[variant=Debug]"
+            "dwarf-with-dsym"
+
+            "XCODE_ATTRIBUTE_GCC_OPTIMIZATION_LEVEL[variant=Debug]"
+            "0"
+
+            "XCODE_ATTRIBUTE_COPY_PHASE_STRIP[variant=Debug]"
+            "NO"
+
+            "XCODE_ATTRIBUTE_STRIP_INSTALLED_PRODUCT[variant=Debug]"
+            "NO"
+
+            "XCODE_ATTRIBUTE_DEAD_CODE_STRIPPING[variant=Debug]"
+            "NO"
+        )
     endif ()
 
     set_target_properties (${target} PROPERTIES OUTPUT_NAME ${addOnName})
