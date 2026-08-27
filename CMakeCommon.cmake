@@ -1,7 +1,7 @@
 function (SetGlobalCompilerDefinitions acVersion addOnLanguage)
 
     if (WIN32)
-        add_definitions (-DUNICODE -D_UNICODE -D_ITERATOR_DEBUG_LEVEL=0)
+        add_definitions (-DUNICODE -D_UNICODE -D_ITERATOR_DEBUG_LEVEL=0 -DWINDOWS)
         set (CMAKE_MSVC_RUNTIME_LIBRARY MultiThreadedDLL CACHE STRING "" FORCE)
     else ()
         add_definitions (-Dmacintosh=1)
