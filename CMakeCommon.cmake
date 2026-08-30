@@ -174,8 +174,7 @@ function (generate_add_on_version_info outSemver)
 
         list (JOIN vers . shortVersion)
 
-        math (EXPR combined "${acVersion} * 100000 + ${gsBuildNum}")
-        list (APPEND vers "${combined}")
+        list (APPEND vers "${gsBuildNum}")
         list (JOIN vers . longVersion)
 
         string (REPLACE & &amp\; addOnDescription "${addOnDescription}")
