@@ -82,10 +82,13 @@ def main ():
     executablePath = GetArchicadExecutablePath (args.appPath)
 
     workspaceRoot = pathlib.Path (__file__).absolute ().parent.parent
+    with open (workspaceRoot / 'config.json', 'r') as configFile:
+        config = json.load (configFile)
+
     vscodeFolder = workspaceRoot / '.vscode'
     vscodeFolder.mkdir (parents = True, exist_ok = True)
 
-    taskLabel = f'Build SiteManager Add-On ({args.buildConfig})'
+    taskLabel = f'Build {config["addOnName"]} Add-On ({args.buildConfig})'
     launchName = f'Debug {pathlib.Path (args.appPath).stem} (lldb)'
 
     WriteTasksJson (vscodeFolder, args.buildConfig, taskLabel)
