@@ -8,6 +8,7 @@ def ParseArguments ():
     parser = argparse.ArgumentParser (description = 'Generate .vscode/tasks.json and launch.json for building and debugging the add-on with Archicad.')
     parser.add_argument ('appPath', type = str, help = 'Path to the Archicad.app bundle (e.g. "/Applications/GRAPHISOFT/Archicad 29/Archicad 29.app")')
     parser.add_argument ('-b', '--buildConfig', dest = 'buildConfig', type = str, default = 'Debug', help = 'Build configuration to use (default: Debug)')
+    parser.add_argument ('-v', '--visualizers', '--lldbVisualizersPath', dest = 'lldbVisualizersPath', type = str, help = 'Path to LLDB_Visualizers.py')
     return parser.parse_args ()
 
 
@@ -55,7 +56,7 @@ def WriteTasksJson (vscodeFolder, buildConfig, taskLabel):
         tasksFile.write ('\n')
 
 
-def WriteLaunchJson (vscodeFolder, executablePath, taskLabel, launchName):
+def WriteLaunchJson (vscodeFolder, executablePath, taskLabel, launchName, lldbVisualizersPath = None):
     launchJson = {
         'version': '0.2.0',
         'configurations': [
@@ -70,6 +71,11 @@ def WriteLaunchJson (vscodeFolder, executablePath, taskLabel, launchName):
             }
         ]
     }
+
+    if lldbVisualizersPath:
+        launchJson['configurations'][0]['initCommands'] = [
+            f'command script import "{pathlib.Path (lldbVisualizersPath)}"'
+        ]
 
     with open (vscodeFolder / 'launch.json', 'w') as launchFile:
         json.dump (launchJson, launchFile, indent = 4, ensure_ascii = False)
@@ -92,7 +98,7 @@ def main ():
     launchName = f'Debug {pathlib.Path (args.appPath).stem} (lldb)'
 
     WriteTasksJson (vscodeFolder, args.buildConfig, taskLabel)
-    WriteLaunchJson (vscodeFolder, executablePath, taskLabel, launchName)
+    WriteLaunchJson (vscodeFolder, executablePath, taskLabel, launchName, args.lldbVisualizersPath)
 
     print (f'Generated {vscodeFolder / "tasks.json"}')
     print (f'Generated {vscodeFolder / "launch.json"}')
